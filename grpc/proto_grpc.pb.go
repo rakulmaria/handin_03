@@ -18,86 +18,86 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// TimeAskClient is the client API for TimeAsk service.
+// PublishServiceClient is the client API for PublishService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type TimeAskClient interface {
-	AskForTime(ctx context.Context, in *AskForTimeMessage, opts ...grpc.CallOption) (*TimeMessage, error)
+type PublishServiceClient interface {
+	Publish(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (*ChatResponse, error)
 }
 
-type timeAskClient struct {
+type publishServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewTimeAskClient(cc grpc.ClientConnInterface) TimeAskClient {
-	return &timeAskClient{cc}
+func NewPublishServiceClient(cc grpc.ClientConnInterface) PublishServiceClient {
+	return &publishServiceClient{cc}
 }
 
-func (c *timeAskClient) AskForTime(ctx context.Context, in *AskForTimeMessage, opts ...grpc.CallOption) (*TimeMessage, error) {
-	out := new(TimeMessage)
-	err := c.cc.Invoke(ctx, "/Handin_03.TimeAsk/AskForTime", in, out, opts...)
+func (c *publishServiceClient) Publish(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (*ChatResponse, error) {
+	out := new(ChatResponse)
+	err := c.cc.Invoke(ctx, "/Handin_03.PublishService/Publish", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// TimeAskServer is the server API for TimeAsk service.
-// All implementations must embed UnimplementedTimeAskServer
+// PublishServiceServer is the server API for PublishService service.
+// All implementations must embed UnimplementedPublishServiceServer
 // for forward compatibility
-type TimeAskServer interface {
-	AskForTime(context.Context, *AskForTimeMessage) (*TimeMessage, error)
-	mustEmbedUnimplementedTimeAskServer()
+type PublishServiceServer interface {
+	Publish(context.Context, *ChatRequest) (*ChatResponse, error)
+	mustEmbedUnimplementedPublishServiceServer()
 }
 
-// UnimplementedTimeAskServer must be embedded to have forward compatible implementations.
-type UnimplementedTimeAskServer struct {
+// UnimplementedPublishServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedPublishServiceServer struct {
 }
 
-func (UnimplementedTimeAskServer) AskForTime(context.Context, *AskForTimeMessage) (*TimeMessage, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AskForTime not implemented")
+func (UnimplementedPublishServiceServer) Publish(context.Context, *ChatRequest) (*ChatResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
 }
-func (UnimplementedTimeAskServer) mustEmbedUnimplementedTimeAskServer() {}
+func (UnimplementedPublishServiceServer) mustEmbedUnimplementedPublishServiceServer() {}
 
-// UnsafeTimeAskServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to TimeAskServer will
+// UnsafePublishServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to PublishServiceServer will
 // result in compilation errors.
-type UnsafeTimeAskServer interface {
-	mustEmbedUnimplementedTimeAskServer()
+type UnsafePublishServiceServer interface {
+	mustEmbedUnimplementedPublishServiceServer()
 }
 
-func RegisterTimeAskServer(s grpc.ServiceRegistrar, srv TimeAskServer) {
-	s.RegisterService(&TimeAsk_ServiceDesc, srv)
+func RegisterPublishServiceServer(s grpc.ServiceRegistrar, srv PublishServiceServer) {
+	s.RegisterService(&PublishService_ServiceDesc, srv)
 }
 
-func _TimeAsk_AskForTime_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AskForTimeMessage)
+func _PublishService_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChatRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(TimeAskServer).AskForTime(ctx, in)
+		return srv.(PublishServiceServer).Publish(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Handin_03.TimeAsk/AskForTime",
+		FullMethod: "/Handin_03.PublishService/Publish",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(TimeAskServer).AskForTime(ctx, req.(*AskForTimeMessage))
+		return srv.(PublishServiceServer).Publish(ctx, req.(*ChatRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// TimeAsk_ServiceDesc is the grpc.ServiceDesc for TimeAsk service.
+// PublishService_ServiceDesc is the grpc.ServiceDesc for PublishService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var TimeAsk_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "Handin_03.TimeAsk",
-	HandlerType: (*TimeAskServer)(nil),
+var PublishService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "Handin_03.PublishService",
+	HandlerType: (*PublishServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "AskForTime",
-			Handler:    _TimeAsk_AskForTime_Handler,
+			MethodName: "Publish",
+			Handler:    _PublishService_Publish_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -4,15 +4,19 @@ package Handin_03;
 
 option go_package = "grpc/proto";
 
-message AskForTimeMessage {
-  int64 clientId = 1;
+
+message ChatRequest {
+    string chat = 1;
+    int64 clientId = 2;
 }
 
-message TimeMessage {
-  string serverName = 1;
-  string time = 2;
+message ChatResponse {
+  string result = 1;
 }
 
-service TimeAsk {
-  rpc AskForTime(AskForTimeMessage) returns (TimeMessage);
+service PublishService{
+    rpc Publish(ChatRequest) returns (ChatResponse) {};
 }
+
+//protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative grpc/proto.proto  
+

@@ -7,14 +7,13 @@ import (
 	"log"
 	"net"
 	"strconv"
-	"time"
 
 	"google.golang.org/grpc"
 )
 
 // Struct that will be used to represent the Server.
 type Server struct {
-	proto.UnimplementedTimeAskServer // Necessary
+	proto.UnimplementedPublishServiceServer // Necessary
 	name                             string
 	port                             int
 }
@@ -55,17 +54,24 @@ func startServer(server *Server) {
 	log.Printf("Started server at port: %d\n", server.port)
 
 	// Register the grpc server and serve its listener
-	proto.RegisterTimeAskServer(grpcServer, server)
+	proto.RegisterPublishServiceServer(grpcServer, server)
 	serveError := grpcServer.Serve(listener)
 	if serveError != nil {
 		log.Fatalf("Could not serve listener")
 	}
 }
 
-func (c *Server) AskForTime(ctx context.Context, in *proto.AskForTimeMessage) (*proto.TimeMessage, error) {
-	log.Printf("Client with ID %d asked for the time\n", in.ClientId)
-	return &proto.TimeMessage{
-		Time:       time.Now().String(),
-		ServerName: c.name,
+// func (c *Server) AskForTime(ctx context.Context, in *proto.AskForTimeMessage) (*proto.TimeMessage, error) {
+// 	log.Printf("Client with ID %d asked for the time\n", in.ClientId)
+// 	return &proto.TimeMessage{
+// 		Time:       time.Now().String(),
+// 		ServerName: c.name,
+// 	}, nil
+// }
+
+func (c *Server) Publish(ctx context.Context, in *proto.ChatRequest) (*proto.ChatResponse, error){
+	log.Printf("Client with ID %d sent a chat message", in.ClientId)
+	return &proto.ChatResponse{
+		Result: "hej med dig jeg skal være en response til din chat",
 	}, nil
 }

@@ -18,6 +18,7 @@ type Client struct {
 	portNumber int
 }
 
+
 var (
 	clientPort = flag.Int("cPort", 0, "client port number")
 	serverPort = flag.Int("sPort", 0, "server port number (should match the port used for the server)")
@@ -34,14 +35,14 @@ func main() {
 	}
 
 	// Wait for the client (user) to ask for the time
-	go waitForTimeRequest(client)
+	go waitForChatMessage(client)
 
 	for {
 
 	}
 }
 
-func waitForTimeRequest(client *Client) {
+func waitForChatMessage(client *Client) {
 	// Connect to the server
 	serverConnection, _ := connectToServer()
 
@@ -52,19 +53,21 @@ func waitForTimeRequest(client *Client) {
 		log.Printf("Client asked for time with input: %s\n", input)
 
 		// Ask the server for the time
-		timeReturnMessage, err := serverConnection.AskForTime(context.Background(), &proto.AskForTimeMessage{
+		//sending a chatmessage calling the publish method from server
+		chatResponseMessage, err := serverConnection.Publish(context.Background(), &proto.ChatRequest{
+			Chat: "Hej jeg er den chat request der bliver sendt",
 			ClientId: int64(client.id),
 		})
 
 		if err != nil {
 			log.Printf(err.Error())
 		} else {
-			log.Printf("Server %s says the time is %s\n", timeReturnMessage.ServerName, timeReturnMessage.Time)
+			log.Printf(chatResponseMessage.Result)
 		}
 	}
 }
 
-func connectToServer() (proto.TimeAskClient, error) {
+func connectToServer() (proto.PublishServiceClient, error) {
 	// Dial the server at the specified port.
 	conn, err := grpc.Dial("localhost:"+strconv.Itoa(*serverPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -72,5 +75,5 @@ func connectToServer() (proto.TimeAskClient, error) {
 	} else {
 		log.Printf("Connected to the server at port %d\n", *serverPort)
 	}
-	return proto.NewTimeAskClient(conn), nil
+	return proto.NewPublishServiceClient(conn), nil
 }
