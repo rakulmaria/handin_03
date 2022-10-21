@@ -4,6 +4,7 @@ import (
 	proto "Handin_03/grpc"
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -123,6 +124,7 @@ func (s *Server) Broadcast(ctx context.Context, in *proto.ChatMessage) (*proto.E
 		close(done)
 	}()
 
+	fmt.Println("Printing number of connections made: ", len(s.connection))
 	//this makes sure that we can only return from the function after the goroutines are done. 
 		<-done
 		return &proto.Empty{}, nil
