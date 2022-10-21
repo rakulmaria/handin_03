@@ -18,88 +18,152 @@ import (
 // Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
-// PublishServiceClient is the client API for PublishService service.
+// ChittyChatClient is the client API for ChittyChat service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type PublishServiceClient interface {
-	Publish(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (*ChatResponse, error)
+type ChittyChatClient interface {
+	Publish(ctx context.Context, in *Connect, opts ...grpc.CallOption) (ChittyChat_PublishClient, error)
+	Broadcast(ctx context.Context, in *ChatMessage, opts ...grpc.CallOption) (*Empty, error)
 }
 
-type publishServiceClient struct {
+type chittyChatClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewPublishServiceClient(cc grpc.ClientConnInterface) PublishServiceClient {
-	return &publishServiceClient{cc}
+func NewChittyChatClient(cc grpc.ClientConnInterface) ChittyChatClient {
+	return &chittyChatClient{cc}
 }
 
-func (c *publishServiceClient) Publish(ctx context.Context, in *ChatRequest, opts ...grpc.CallOption) (*ChatResponse, error) {
-	out := new(ChatResponse)
-	err := c.cc.Invoke(ctx, "/Handin_03.PublishService/Publish", in, out, opts...)
+func (c *chittyChatClient) Publish(ctx context.Context, in *Connect, opts ...grpc.CallOption) (ChittyChat_PublishClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ChittyChat_ServiceDesc.Streams[0], "/Handin_03.ChittyChat/Publish", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &chittyChatPublishClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ChittyChat_PublishClient interface {
+	Recv() (*ChatMessage, error)
+	grpc.ClientStream
+}
+
+type chittyChatPublishClient struct {
+	grpc.ClientStream
+}
+
+func (x *chittyChatPublishClient) Recv() (*ChatMessage, error) {
+	m := new(ChatMessage)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *chittyChatClient) Broadcast(ctx context.Context, in *ChatMessage, opts ...grpc.CallOption) (*Empty, error) {
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, "/Handin_03.ChittyChat/Broadcast", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// PublishServiceServer is the server API for PublishService service.
-// All implementations must embed UnimplementedPublishServiceServer
+// ChittyChatServer is the server API for ChittyChat service.
+// All implementations must embed UnimplementedChittyChatServer
 // for forward compatibility
-type PublishServiceServer interface {
-	Publish(context.Context, *ChatRequest) (*ChatResponse, error)
-	mustEmbedUnimplementedPublishServiceServer()
+type ChittyChatServer interface {
+	Publish(*Connect, ChittyChat_PublishServer) error
+	Broadcast(context.Context, *ChatMessage) (*Empty, error)
+	mustEmbedUnimplementedChittyChatServer()
 }
 
-// UnimplementedPublishServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedPublishServiceServer struct {
+// UnimplementedChittyChatServer must be embedded to have forward compatible implementations.
+type UnimplementedChittyChatServer struct {
 }
 
-func (UnimplementedPublishServiceServer) Publish(context.Context, *ChatRequest) (*ChatResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Publish not implemented")
+func (UnimplementedChittyChatServer) Publish(*Connect, ChittyChat_PublishServer) error {
+	return status.Errorf(codes.Unimplemented, "method Publish not implemented")
 }
-func (UnimplementedPublishServiceServer) mustEmbedUnimplementedPublishServiceServer() {}
+func (UnimplementedChittyChatServer) Broadcast(context.Context, *ChatMessage) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Broadcast not implemented")
+}
+func (UnimplementedChittyChatServer) mustEmbedUnimplementedChittyChatServer() {}
 
-// UnsafePublishServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to PublishServiceServer will
+// UnsafeChittyChatServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ChittyChatServer will
 // result in compilation errors.
-type UnsafePublishServiceServer interface {
-	mustEmbedUnimplementedPublishServiceServer()
+type UnsafeChittyChatServer interface {
+	mustEmbedUnimplementedChittyChatServer()
 }
 
-func RegisterPublishServiceServer(s grpc.ServiceRegistrar, srv PublishServiceServer) {
-	s.RegisterService(&PublishService_ServiceDesc, srv)
+func RegisterChittyChatServer(s grpc.ServiceRegistrar, srv ChittyChatServer) {
+	s.RegisterService(&ChittyChat_ServiceDesc, srv)
 }
 
-func _PublishService_Publish_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ChatRequest)
+func _ChittyChat_Publish_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(Connect)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ChittyChatServer).Publish(m, &chittyChatPublishServer{stream})
+}
+
+type ChittyChat_PublishServer interface {
+	Send(*ChatMessage) error
+	grpc.ServerStream
+}
+
+type chittyChatPublishServer struct {
+	grpc.ServerStream
+}
+
+func (x *chittyChatPublishServer) Send(m *ChatMessage) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _ChittyChat_Broadcast_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ChatMessage)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PublishServiceServer).Publish(ctx, in)
+		return srv.(ChittyChatServer).Broadcast(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Handin_03.PublishService/Publish",
+		FullMethod: "/Handin_03.ChittyChat/Broadcast",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PublishServiceServer).Publish(ctx, req.(*ChatRequest))
+		return srv.(ChittyChatServer).Broadcast(ctx, req.(*ChatMessage))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// PublishService_ServiceDesc is the grpc.ServiceDesc for PublishService service.
+// ChittyChat_ServiceDesc is the grpc.ServiceDesc for ChittyChat service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var PublishService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "Handin_03.PublishService",
-	HandlerType: (*PublishServiceServer)(nil),
+var ChittyChat_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "Handin_03.ChittyChat",
+	HandlerType: (*ChittyChatServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Publish",
-			Handler:    _PublishService_Publish_Handler,
+			MethodName: "Broadcast",
+			Handler:    _ChittyChat_Broadcast_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Publish",
+			Handler:       _ChittyChat_Publish_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "grpc/proto.proto",
 }
