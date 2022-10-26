@@ -19,14 +19,16 @@ import (
 type Client struct {
 	id         int64
 	portNumber int
+	clientChannel chan *proto.ChatMessage 
 }
 
 var (
 	clientPort = flag.Int("cPort", 0, "client port number")
 	serverPort = flag.Int("sPort", 0, "server port number (should match the port used for the server)")
+	clientName = flag.String("name", "John", "name of the client")
 )
 
-var publishClient proto.ChittyChatClient
+var JoinClient proto.ChittyChatClient
 var wait *sync.WaitGroup
 
 func init(){
@@ -47,12 +49,12 @@ func main() {
 		log.Printf("Connected to the server at port %d\n", *serverPort)
 	}
 
-	publishClient = proto.NewChittyChatClient(conn)
+	JoinClient = proto.NewChittyChatClient(conn)
 
 	//going without name for
 	// Create a client
 	client := &proto.Client{
-		//Id: int64(rand.Intn(100)),
+		Name: *clientName,
 	}
 
 	connectToServer(client)
@@ -75,7 +77,7 @@ func main() {
 			}
 
 				// calling the broadcast function that takes a message and returns an empty message
-			_, err := publishClient.Broadcast(context.Background(),message)
+			_, err := JoinClient.Publish(context.Background(),message)
 			if err != nil {
 				log.Printf(err.Error())
 			} 
@@ -97,7 +99,7 @@ func connectToServer(client *proto.Client) error {
 
 	var streamError error
 
-	stream, err := publishClient.Publish(context.Background(), &proto.Connect{
+	stream, err := JoinClient.JoinChat(context.Background(), &proto.Connect{
 		Client:   client,
 		Active: true,
 	})
@@ -109,7 +111,7 @@ func connectToServer(client *proto.Client) error {
 	}
 
 	wait.Add(1)
-		go func(str proto.ChittyChat_PublishClient){
+		go func(str proto.ChittyChat_JoinChatClient){
 			defer wait.Done()
 
 			for {

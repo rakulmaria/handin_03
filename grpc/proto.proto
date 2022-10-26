@@ -24,8 +24,9 @@ message Empty{}
 
 
 service ChittyChat{
-    rpc Publish(Connect) returns (stream ChatMessage){}
-    rpc Broadcast(ChatMessage) returns (Empty){}
+    rpc JoinChat(Connect) returns (stream ChatMessage){}
+    rpc Publish(ChatMessage) returns (Empty){}
+    rpc LeaveChat(Connect) returns (stream ChatMessage){}
 }
 
 

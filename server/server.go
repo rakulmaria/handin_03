@@ -15,7 +15,7 @@ import (
 )
 
 type Connection struct{
-	stream proto.ChittyChat_PublishServer
+	stream proto.ChittyChat_JoinChatServer
 	id int64
 	active bool
 	error chan error
@@ -61,7 +61,7 @@ func startServer(server *Server) {
 	grpcServer := grpc.NewServer()
 
 	// Make the server listen at the given port (convert int port to string)
-	listener, err := net.Listen("tcp", ":"+strconv.Itoa(server.port))
+	listener, err := net.Listen("tcp", "localhost:"+strconv.Itoa(server.port))
 
 	if err != nil {
 		log.Fatalf("Could not create the server %v", err)
@@ -76,7 +76,7 @@ func startServer(server *Server) {
 	}
 }
 
-func (s *Server) Publish(in *proto.Connect, stream proto.ChittyChat_PublishServer) error {
+func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatServer) error {
 
 	conn := &Connection{
 		stream: stream,
@@ -88,8 +88,6 @@ func (s *Server) Publish(in *proto.Connect, stream proto.ChittyChat_PublishServe
 	//putting the new connection into our servers field connections (array of connections)
 	s.connection = append(s.connection, conn)
 
-	
-
 	//we want for every connection to broadcast a message to all saying that a person joined the chat
 	joinedMessage := &proto.ChatMessage{
 		ClientId: in.Client.Id,
@@ -98,7 +96,7 @@ func (s *Server) Publish(in *proto.Connect, stream proto.ChittyChat_PublishServe
 	}
 
 	for _, conn := range s.connection{
-		s.Broadcast(conn.stream.Context(),joinedMessage);//WHY IS THIS PRINTING SOOO MANY TIMES??
+		s.Publish(conn.stream.Context(),joinedMessage);//WHY IS THIS PRINTING SOOO MANY TIMES??
 		//log.Printf("client with id %d joined the chat",in.Client.Id)
 	}
 
@@ -107,7 +105,7 @@ func (s *Server) Publish(in *proto.Connect, stream proto.ChittyChat_PublishServe
 	return <-conn.error
 }
 
-func (s *Server) Broadcast(ctx context.Context, in *proto.ChatMessage) (*proto.Empty, error) {
+func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Empty, error) {
 	//counter of go routines. Waits for the go-routines to finish, then decrement the counter
 	wait := sync.WaitGroup{}
 
