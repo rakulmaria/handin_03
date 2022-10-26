@@ -9,6 +9,7 @@ import (
 	"net"
 	"strconv"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 )
@@ -77,9 +78,6 @@ func startServer(server *Server) {
 
 func (s *Server) Publish(in *proto.Connect, stream proto.ChittyChat_PublishServer) error {
 
-	in.Client.Id = int64(len(s.connection));
-	fmt.Println("giving the user the id: ", in.Client.Id)
-
 	conn := &Connection{
 		stream: stream,
 		id:    in.Client.Id,
@@ -89,6 +87,21 @@ func (s *Server) Publish(in *proto.Connect, stream proto.ChittyChat_PublishServe
 
 	//putting the new connection into our servers field connections (array of connections)
 	s.connection = append(s.connection, conn)
+
+	
+
+	//we want for every connection to broadcast a message to all saying that a person joined the chat
+	joinedMessage := &proto.ChatMessage{
+		ClientId: in.Client.Id,
+		Message: "client with id %d joined the chat" ,
+		Timestamp: time.Now().String(), 
+	}
+
+	for _, conn := range s.connection{
+		s.Broadcast(conn.stream.Context(),joinedMessage);//WHY IS THIS PRINTING SOOO MANY TIMES??
+		//log.Printf("client with id %d joined the chat",in.Client.Id)
+	}
+
 
 	//returning the error if any
 	return <-conn.error

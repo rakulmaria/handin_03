@@ -35,15 +35,9 @@ func init(){
 
 
 func main() {
-
-	//timestamp := time.Now()
-	done := make(chan int)
+	
 	// Parse the flags to get the port for the client
 	flag.Parse()
-
-
-	id := int64(1)
-
 
 	// Dial the server at the specified port.
 	conn, err := grpc.Dial("localhost:"+strconv.Itoa(*serverPort), grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -58,12 +52,12 @@ func main() {
 	//going without name for
 	// Create a client
 	client := &proto.Client{
-		Id: int64(id),
+		//Id: int64(rand.Intn(100)),
 	}
 
 	connectToServer(client)
 
-
+	done := make(chan int)
 	// Wait for the client (user) to ask for the time
 	wait.Add(1)
 	go func(){
@@ -98,6 +92,7 @@ func main() {
 		<-done
 }
 
+
 func connectToServer(client *proto.Client) error {
 
 	var streamError error
@@ -110,16 +105,15 @@ func connectToServer(client *proto.Client) error {
 	if err != nil{
 		return fmt.Errorf("Connection failed: %v",err)
 	} else {
-		log.Printf("client with id %d joined the chat",client.Id)
+		//log.Printf("client with id %d joined the chat",client.Id)
 	}
-
 
 	wait.Add(1)
 		go func(str proto.ChittyChat_PublishClient){
 			defer wait.Done()
 
 			for {
-				//call to the publish clients method
+				//call to the publishClients method Recv() which returns a chatMessage
 				//wait for us to recieve a message from the server
 				message,err := str.Recv()
 
@@ -133,7 +127,6 @@ func connectToServer(client *proto.Client) error {
 
 			}
 		}(stream) //calling the function with stream
-
 
 	return streamError
 }
