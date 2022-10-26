@@ -16,12 +16,6 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-type Client struct {
-	id         int64
-	portNumber int
-	clientChannel chan *proto.ChatMessage 
-}
-
 var (
 	clientPort = flag.Int("cPort", 0, "client port number")
 	serverPort = flag.Int("sPort", 0, "server port number (should match the port used for the server)")
@@ -51,13 +45,13 @@ func main() {
 
 	JoinClient = proto.NewChittyChatClient(conn)
 
-	//going without name for
 	// Create a client
 	client := &proto.Client{
 		Name: *clientName,
 	}
 
 	connectToServer(client)
+	fmt.Println("printing clientname: ", client.Name)
 
 	done := make(chan int)
 	// Wait for the client (user) to ask for the time
@@ -76,7 +70,7 @@ func main() {
 				Timestamp: time.Now().String(),
 			}
 
-				// calling the broadcast function that takes a message and returns an empty message
+				// calling the publish function that takes a message and returns an empty message
 			_, err := JoinClient.Publish(context.Background(),message)
 			if err != nil {
 				log.Printf(err.Error())

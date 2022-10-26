@@ -91,7 +91,7 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 	//we want for every connection to broadcast a message to all saying that a person joined the chat
 	joinedMessage := &proto.ChatMessage{
 		ClientId: in.Client.Id,
-		Message: "client with id %d joined the chat" ,
+		Message: "client with name " + in.Client.Name + " joined the chat",
 		Timestamp: time.Now().String(), 
 	}
 
