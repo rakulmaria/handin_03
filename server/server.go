@@ -4,7 +4,6 @@ import (
 	proto "Handin_03/grpc"
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"net"
 	"strconv"
@@ -15,7 +14,7 @@ import (
 
 type Connection struct {
 	stream proto.ChittyChat_JoinChatServer
-	id     int64
+	name   string
 	active bool
 	error  chan error
 }
@@ -25,13 +24,15 @@ type Server struct {
 	proto.UnimplementedChittyChatServer // Necessary
 	name                                string
 	port                                int
-	connection                          []*Connection
+	//connection                          []*Connection
+	users map[string]*Connection
 }
 
 // Used to get the user-defined port for the server from the command line
 var (
 	port                     = flag.Int("port", 0, "server port number")
 	serverLamportClock int64 = 0
+	users                    = make(map[string]*Connection)
 )
 
 func main() {
@@ -39,13 +40,16 @@ func main() {
 	flag.Parse()
 
 	//empty array of connections for the server
-	var connections []*Connection
+	//var connections []*Connection
+
+	//map
 
 	// Create a server struct
 	server := &Server{
-		name:       "serverName",
-		port:       *port,
-		connection: connections,
+		name: "serverName",
+		port: *port,
+		//connection: connections,
+		users: users,
 	}
 
 	// Start the server
@@ -82,21 +86,23 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 
 	conn := &Connection{
 		stream: stream,
-		id:     in.Client.Id,
+		name:   in.Client.Name,
 		active: true,
 		error:  make(chan error),
 	}
 
 	//putting the new connection into our servers field connections (array of connections)
-	s.connection = append(s.connection, conn)
+	//s.connection = append(s.connection, conn)
+
+	s.users[in.Client.Name] = conn
 
 	//we want for every connection to broadcast a message to all saying that a person joined the chat
 	serverLamportClock++
 
 	joinedMessage := &proto.ChatMessage{
-		ClientId:  in.Client.Id,
-		Message:   "\n **** NEW USER JOINED **** \n - " + in.Client.Name + " joined the chat ",
-		Timestamp: serverLamportClock,
+		ClientName: in.Client.Name,
+		Message:    "\n **** NEW USER JOINED **** \n - " + in.Client.Name + " joined the chat ",
+		Timestamp:  serverLamportClock,
 	}
 
 	s.Publish(conn.stream.Context(), joinedMessage)
@@ -113,7 +119,7 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 	done := make(chan int)
 
 	//this method should for each connection in the servers array of connections, send the message
-	for _, conn := range s.connection {
+	for _, conn := range s.users {
 		wait.Add(1)
 
 		go func(message *proto.ChatMessage, conn *Connection) {
@@ -126,9 +132,9 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 				}
 
 				toBeSentMessage := &proto.ChatMessage{
-					ClientId:  conn.id,
-					Message:   "\n **** CURRENT LAMPORT TIME **** \n - " + strconv.FormatInt(message.Timestamp, 10) + message.Message,
-					Timestamp: serverLamportClock,
+					ClientName: conn.name,
+					Message:    "\n **** CURRENT LAMPORT TIME **** \n - " + strconv.FormatInt(message.Timestamp, 10) + message.Message,
+					Timestamp:  serverLamportClock,
 				}
 
 				err := conn.stream.Send(toBeSentMessage)
@@ -146,9 +152,18 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 		wait.Wait()
 		close(done)
 	}()
-
-	fmt.Println("Printing number of connections made: ", len(s.connection))
 	//this makes sure that we can only return from the function after the goroutines are done.
 	<-done
 	return &proto.Empty{}, nil
+}
+
+func (s *Server) LeaveChat(in *proto.Connect, stream proto.ChittyChat_LeaveChatServer) error {
+	for name := range s.users {
+		if name == in.Client.Name {
+			delete(s.users, name)
+			//fmt.Println("participant with name " + name + "has left the chat")
+
+		}
+	}
+	return nil
 }

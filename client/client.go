@@ -27,6 +27,7 @@ var wait *sync.WaitGroup
 
 func init() {
 	wait = &sync.WaitGroup{}
+
 }
 
 func main() {
@@ -50,7 +51,7 @@ func main() {
 	}
 
 	connectToServer(client)
-	fmt.Println("printing clientname: ", client.Name)
+	//fmt.Println("printing clientname: ", client.Name)
 
 	done := make(chan int)
 	// Wait for the client (user) to ask for the time
@@ -62,19 +63,38 @@ func main() {
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
 			input := scanner.Text()
+			if input == "exit" {
+				JoinClient.LeaveChat(context.Background(), &proto.Connect{
+					Client: client,
+					Active: false,
+				})
 
-			clientLamportClock++
+				LeaveMessage := &proto.ChatMessage{
+					ClientName: client.Name,
+					Message:    "client with name " + client.Name + " left the chat",
+					Timestamp:  clientLamportClock,
+				}
+				_, err := JoinClient.Publish(context.Background(), LeaveMessage)
+				if err != nil {
+					log.Printf(err.Error())
+				}
+				<-done
 
-			message := &proto.ChatMessage{
-				ClientId:  client.Id,
-				Message:   input,
-				Timestamp: clientLamportClock,
-			}
+			} else {
+				//if the input was not exist we sent the message normally
+				clientLamportClock++
 
-			// calling the publish function that takes a message and returns an empty message
-			_, err := JoinClient.Publish(context.Background(), message)
-			if err != nil {
-				log.Printf(err.Error())
+				message := &proto.ChatMessage{
+					ClientName: client.Name,
+					Message:    input,
+					Timestamp:  clientLamportClock,
+				}
+
+				// calling the publish function that takes a message and returns an empty message
+				_, err := JoinClient.Publish(context.Background(), message)
+				if err != nil {
+					log.Printf(err.Error())
+				}
 			}
 		}
 	}()
@@ -115,7 +135,7 @@ func connectToServer(client *proto.Client) error {
 			if message.Timestamp > clientLamportClock {
 				clientLamportClock = message.Timestamp
 			}
-			
+
 			clientLamportClock++
 
 			//if we don't get a messsage
@@ -124,7 +144,15 @@ func connectToServer(client *proto.Client) error {
 				streamError = fmt.Errorf("error reading the message: %v", err)
 			}
 			//if no error we want to print the message to all clients:
-			log.Printf("%v : %s", message.ClientId, message.Message)
+			log.Printf("%v : %s", message.ClientName, message.Message)
+
+			//if we don't get a messsage
+			if err != nil {
+				/// i dont know
+				streamError = fmt.Errorf("error reading the message: %v", err)
+			}
+			//if no error we want to print the message to all clients:
+			log.Printf("%v : %s", message.ClientName, message.Message)
 
 		}
 	}(stream) //calling the function with stream
