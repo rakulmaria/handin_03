@@ -6,6 +6,7 @@ import (
 	"flag"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 	"time"
@@ -34,19 +35,23 @@ var port = flag.Int("port", 0, "server port number")
 var users = make(map[string]*Connection)
 
 func main() {
+
+	//setting the log file
+	f, err := os.OpenFile("golang-demo.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	if err != nil {
+    	log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()	
+	log.SetOutput(f)
+
+
 	// Get the port from the command line when the server is run
 	flag.Parse()
-
-	//empty array of connections for the server
-	//var connections []*Connection
-
-	//map
 
 	// Create a server struct
 	server := &Server{
 		name: "serverName",
 		port: *port,
-		//connection: connections,
 		users: users,
 	}
 
@@ -89,9 +94,7 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 		error:  make(chan error),
 	}
 
-	//putting the new connection into our servers field connections (array of connections)
-	//s.connection = append(s.connection, conn)
-
+	//putting the new connection into our servers field connections (map of clientname and connections)
 	s.users[in.Client.Name] = conn
 
 	//we want for every connection to broadcast a message to all saying that a person joined the chat
@@ -104,6 +107,8 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 	for _, conn := range s.users {
 		s.Publish(conn.stream.Context(), joinedMessage) //WHY IS THIS PRINTING SOOO MANY TIMES??
 	}
+
+	log.Printf("Participant " + in.Client.Name + " joined the Chitty-chat at lamport time xxxxx")
 
 	//returning the error if any
 	return <-conn.error
@@ -129,10 +134,12 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 
 				//if we fail to send a message to the stream. We set the connection to not active
 				if err != nil {
-					log.Printf("Error with Stream: %v - Error: %v", conn.stream, err)
+					//log.Printf("Error with Stream: %v - Error: %v", conn.stream, err)
 					conn.active = false
 					conn.error <- err
 				}
+			}  else {
+				log.Printf("participant: " + message.ClientName + "left Chitty-Chat at lamport time")
 			}
 		}(in, conn)
 	}
@@ -149,8 +156,7 @@ func (s *Server) LeaveChat(in *proto.Connect, stream proto.ChittyChat_LeaveChatS
 	for name := range s.users {
 		if name == in.Client.Name {
 			delete(s.users, name)
-			//fmt.Println("participant with name " + name + "has left the chat")
-
+			log.Printf("participant: " + in.Client.Name + "left Chitty-Chat at lamport time")
 		}
 	}
 	return nil

@@ -32,6 +32,14 @@ func init() {
 
 func main() {
 
+	// //setting the log file
+	// f, err := os.OpenFile("golang-demo.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	// if err != nil {
+    // 	log.Fatalf("error opening file: %v", err)
+	// }
+	// defer f.Close()	
+	// log.SetOutput(f)
+
 	// Parse the flags to get the port for the client
 	flag.Parse()
 
@@ -92,8 +100,9 @@ func main() {
 				_, err := JoinClient.Publish(context.Background(), message)
 				if err != nil {
 					log.Printf(err.Error())
+				} else {
+					log.Printf("client with id: %v sent the message: %s", message.ClientName, message.Message)
 				}
-				//log.Printf("client with id: %v sent the message: %s", message.ClientName, message.Message)
 			}
 		}
 	}()
@@ -136,7 +145,7 @@ func connectToServer(client *proto.Client) error {
 				/// i dont know
 				streamError = fmt.Errorf("error reading the message: %v", err)
 			}
-			//if no error we want to print the message to all clients:
+	
 			log.Printf("%v : %s", message.ClientName, message.Message)
 
 		}
