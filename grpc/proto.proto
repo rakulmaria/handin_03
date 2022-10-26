@@ -5,13 +5,12 @@ package Handin_03;
 option go_package = "grpc/proto";
 
 message ChatMessage{
-    int64 clientId = 1;
+    string clientName = 1;
     string message = 2;
     string timestamp = 3;
 }
 
 message Client{
-    int64 id = 1;
     string name = 2;
 }
 

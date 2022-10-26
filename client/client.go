@@ -25,13 +25,13 @@ var (
 var JoinClient proto.ChittyChatClient
 var wait *sync.WaitGroup
 
-func init(){
+func init() {
 	wait = &sync.WaitGroup{}
+
 }
 
-
 func main() {
-	
+
 	// Parse the flags to get the port for the client
 	flag.Parse()
 
@@ -51,83 +51,96 @@ func main() {
 	}
 
 	connectToServer(client)
-	fmt.Println("printing clientname: ", client.Name)
+	//fmt.Println("printing clientname: ", client.Name)
 
 	done := make(chan int)
 	// Wait for the client (user) to ask for the time
 	wait.Add(1)
-	go func(){
+	go func() {
 		defer wait.Done()
 
 		//now we want to scan the input of the user. Meaning the messages they want to send
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
 			input := scanner.Text()
+			if input == "exit" {
+				JoinClient.LeaveChat(context.Background(), &proto.Connect{
+					Client: client,
+					Active: false,
+				})
 
-			message := &proto.ChatMessage{
-				ClientId: client.Id,
-				Message: input,
-				Timestamp: time.Now().String(),
-			}
+				LeaveMessage := &proto.ChatMessage{
+					ClientName: client.Name,
+					Message:    "client with name " + client.Name + " left the chat",
+					Timestamp:  time.Now().String(),
+				}
+				_, err := JoinClient.Publish(context.Background(), LeaveMessage)
+				if err != nil {
+					log.Printf(err.Error())
+				}
+				<-done
+
+			} else {
+				//if the input was not exist we sent the message normally
+				message := &proto.ChatMessage{
+					ClientName: client.Name,
+					Message:    input,
+					Timestamp:  time.Now().String(),
+				}
 
 				// calling the publish function that takes a message and returns an empty message
-			_, err := JoinClient.Publish(context.Background(),message)
-			if err != nil {
-				log.Printf(err.Error())
-			} 
-			log.Printf("client with id: %v sent the message: %s",message.ClientId, message.Message)
+				_, err := JoinClient.Publish(context.Background(), message)
+				if err != nil {
+					log.Printf(err.Error())
+				}
+				//log.Printf("client with id: %v sent the message: %s", message.ClientName, message.Message)
+			}
 		}
 	}()
 
-	go func(){
+	go func() {
 		wait.Wait()
 		close(done)
 	}()
 
-	//this makes sure that we can only return from the function after the goroutines are done. 
-		<-done
+	//this makes sure that we can only return from the function after the goroutines are done.
+	<-done
 }
-
 
 func connectToServer(client *proto.Client) error {
 
 	var streamError error
 
 	stream, err := JoinClient.JoinChat(context.Background(), &proto.Connect{
-		Client:   client,
+		Client: client,
 		Active: true,
 	})
 
-	if err != nil{
-		return fmt.Errorf("Connection failed: %v",err)
+	if err != nil {
+		return fmt.Errorf("Connection failed: %v", err)
 	} else {
 		//log.Printf("client with id %d joined the chat",client.Id)
 	}
 
 	wait.Add(1)
-		go func(str proto.ChittyChat_JoinChatClient){
-			defer wait.Done()
+	go func(str proto.ChittyChat_JoinChatClient) {
+		defer wait.Done()
 
-			for {
-				//call to the publishClients method Recv() which returns a chatMessage
-				//wait for us to recieve a message from the server
-				message,err := str.Recv()
+		for {
+			//call to the publishClients method Recv() which returns a chatMessage
+			//wait for us to recieve a message from the server
+			message, err := str.Recv()
 
-				//if we don't get a messsage
-				if err != nil{
-					/// i dont know
-					streamError = fmt.Errorf("error reading the message: %v", err)
-				}
-				//if no error we want to print the message to all clients: 
-				log.Printf("%v : %s", message.ClientId, message.Message)
-
+			//if we don't get a messsage
+			if err != nil {
+				/// i dont know
+				streamError = fmt.Errorf("error reading the message: %v", err)
 			}
-		}(stream) //calling the function with stream
+			//if no error we want to print the message to all clients:
+			log.Printf("%v : %s", message.ClientName, message.Message)
+
+		}
+	}(stream) //calling the function with stream
 
 	return streamError
 }
-
-
-
-
-	
