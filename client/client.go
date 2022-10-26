@@ -146,14 +146,6 @@ func connectToServer(client *proto.Client) error {
 			//if no error we want to print the message to all clients:
 			log.Printf("%v : %s", message.ClientName, message.Message)
 
-			//if we don't get a messsage
-			if err != nil {
-				/// i dont know
-				streamError = fmt.Errorf("error reading the message: %v", err)
-			}
-			//if no error we want to print the message to all clients:
-			log.Printf("%v : %s", message.ClientName, message.Message)
-
 		}
 	}(stream) //calling the function with stream
 
