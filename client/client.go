@@ -90,6 +90,7 @@ func main() {
 
 				// calling the publish function that takes a message and returns an empty message
 				_, err := JoinClient.Publish(context.Background(), message)
+
 				if err != nil {
 					log.Printf(err.Error())
 				}
