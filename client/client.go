@@ -76,8 +76,6 @@ func main() {
 			if err != nil {
 				log.Printf(err.Error())
 			}
-			// log.Printf("Current Lamport time: %v", message.Timestamp)
-			// log.Printf("client with id: %v sent the message: %s", message.ClientId, message.Message)
 		}
 	}()
 

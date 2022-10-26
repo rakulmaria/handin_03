@@ -90,10 +90,6 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 	//putting the new connection into our servers field connections (array of connections)
 	s.connection = append(s.connection, conn)
 
-	// if serverLamportClock != 0 {
-	// 	serverLamportClock++
-	// }
-
 	//we want for every connection to broadcast a message to all saying that a person joined the chat
 	serverLamportClock++
 
@@ -103,16 +99,7 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 		Timestamp: serverLamportClock,
 	}
 
-	// if serverLamportClock == 0 {
-	// 	serverLamportClock++
-	// }
-
 	s.Publish(conn.stream.Context(), joinedMessage)
-
-	// for _, conn := range s.connection { //WHY IS THIS PRINTING SOOO MANY TIMES??
-	// 	//log.Printf("client with id %d joined the chat",in.Client.Id)
-	// 	serverLamportClock++
-	// }
 
 	//returning the error if any
 	return <-conn.error
@@ -134,7 +121,6 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 			defer wait.Done()
 
 			if conn.active {
-				// we did some things here
 				if message.Timestamp > serverLamportClock {
 					serverLamportClock = message.Timestamp
 				}
