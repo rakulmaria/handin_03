@@ -7,7 +7,7 @@ option go_package = "grpc/proto";
 message ChatMessage{
     int64 clientId = 1;
     string message = 2;
-    string timestamp = 3;
+    int64 timestamp = 3;
 }
 
 message Client{

@@ -9,28 +9,30 @@ import (
 	"net"
 	"strconv"
 	"sync"
-	"time"
 
 	"google.golang.org/grpc"
 )
 
-type Connection struct{
+type Connection struct {
 	stream proto.ChittyChat_JoinChatServer
-	id int64
+	id     int64
 	active bool
-	error chan error
+	error  chan error
 }
 
 // Struct that will be used to represent the Server.
 type Server struct {
 	proto.UnimplementedChittyChatServer // Necessary
-	name                             string
-	port                             int
-	connection[]*Connection
+	name                                string
+	port                                int
+	connection                          []*Connection
 }
 
 // Used to get the user-defined port for the server from the command line
-var port = flag.Int("port", 0, "server port number")
+var (
+	port                     = flag.Int("port", 0, "server port number")
+	serverLamportClock int64 = 0
+)
 
 func main() {
 	// Get the port from the command line when the server is run
@@ -41,8 +43,8 @@ func main() {
 
 	// Create a server struct
 	server := &Server{
-		name: "serverName",
-		port: *port,
+		name:       "serverName",
+		port:       *port,
 		connection: connections,
 	}
 
@@ -80,7 +82,7 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 
 	conn := &Connection{
 		stream: stream,
-		id:    in.Client.Id,
+		id:     in.Client.Id,
 		active: true,
 		error:  make(chan error),
 	}
@@ -88,18 +90,29 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 	//putting the new connection into our servers field connections (array of connections)
 	s.connection = append(s.connection, conn)
 
+	// if serverLamportClock != 0 {
+	// 	serverLamportClock++
+	// }
+
 	//we want for every connection to broadcast a message to all saying that a person joined the chat
+	serverLamportClock++
+
 	joinedMessage := &proto.ChatMessage{
-		ClientId: in.Client.Id,
-		Message: "client with name " + in.Client.Name + " joined the chat",
-		Timestamp: time.Now().String(), 
+		ClientId:  in.Client.Id,
+		Message:   "\n **** NEW USER JOINED **** \n - " + in.Client.Name + " joined the chat ",
+		Timestamp: serverLamportClock,
 	}
 
-	for _, conn := range s.connection{
-		s.Publish(conn.stream.Context(),joinedMessage);//WHY IS THIS PRINTING SOOO MANY TIMES??
-		//log.Printf("client with id %d joined the chat",in.Client.Id)
-	}
+	// if serverLamportClock == 0 {
+	// 	serverLamportClock++
+	// }
 
+	s.Publish(conn.stream.Context(), joinedMessage)
+
+	// for _, conn := range s.connection { //WHY IS THIS PRINTING SOOO MANY TIMES??
+	// 	//log.Printf("client with id %d joined the chat",in.Client.Id)
+	// 	serverLamportClock++
+	// }
 
 	//returning the error if any
 	return <-conn.error
@@ -112,18 +125,27 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 	//use this to know if our goroutines are finished
 	done := make(chan int)
 
-
 	//this method should for each connection in the servers array of connections, send the message
-	for _, conn := range s.connection{
+	for _, conn := range s.connection {
 		wait.Add(1)
 
-		go func(message *proto.ChatMessage, conn *Connection){
+		go func(message *proto.ChatMessage, conn *Connection) {
 			//when the go routine is finished running the counter will decrement
 			defer wait.Done()
 
-			if conn.active{
-				err := conn.stream.Send(message)
+			if conn.active {
+				// we did some things here
+				if message.Timestamp > serverLamportClock {
+					serverLamportClock = message.Timestamp
+				}
 
+				toBeSentMessage := &proto.ChatMessage{
+					ClientId:  conn.id,
+					Message:   "\n **** CURRENT LAMPORT TIME **** \n - " + strconv.FormatInt(message.Timestamp, 10) + message.Message,
+					Timestamp: serverLamportClock,
+				}
+
+				err := conn.stream.Send(toBeSentMessage)
 
 				//if we fail to send a message to the stream. We set the connection to not active
 				if err != nil {
@@ -131,29 +153,16 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 					conn.active = false
 					conn.error <- err
 				}
-			} 
-		}(in,conn)
-} 
-	go func(){
+			}
+		}(in, conn)
+	}
+	go func() {
 		wait.Wait()
 		close(done)
 	}()
 
 	fmt.Println("Printing number of connections made: ", len(s.connection))
-	//this makes sure that we can only return from the function after the goroutines are done. 
-		<-done
-		return &proto.Empty{}, nil
-	}
-
-
-
-
-
-
-
-
-
-
-
-
-
+	//this makes sure that we can only return from the function after the goroutines are done.
+	<-done
+	return &proto.Empty{}, nil
+}

@@ -10,28 +10,27 @@ import (
 	"os"
 	"strconv"
 	"sync"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
 var (
-	clientPort = flag.Int("cPort", 0, "client port number")
-	serverPort = flag.Int("sPort", 0, "server port number (should match the port used for the server)")
-	clientName = flag.String("name", "John", "name of the client")
+	clientPort               = flag.Int("cPort", 0, "client port number")
+	serverPort               = flag.Int("sPort", 0, "server port number (should match the port used for the server)")
+	clientName               = flag.String("name", "John", "name of the client")
+	clientLamportClock int64 = 0
 )
 
 var JoinClient proto.ChittyChatClient
 var wait *sync.WaitGroup
 
-func init(){
+func init() {
 	wait = &sync.WaitGroup{}
 }
 
-
 func main() {
-	
+
 	// Parse the flags to get the port for the client
 	flag.Parse()
 
@@ -56,7 +55,7 @@ func main() {
 	done := make(chan int)
 	// Wait for the client (user) to ask for the time
 	wait.Add(1)
-	go func(){
+	go func() {
 		defer wait.Done()
 
 		//now we want to scan the input of the user. Meaning the messages they want to send
@@ -64,70 +63,71 @@ func main() {
 		for scanner.Scan() {
 			input := scanner.Text()
 
+			clientLamportClock++
+
 			message := &proto.ChatMessage{
-				ClientId: client.Id,
-				Message: input,
-				Timestamp: time.Now().String(),
+				ClientId:  client.Id,
+				Message:   input,
+				Timestamp: clientLamportClock,
 			}
 
-				// calling the publish function that takes a message and returns an empty message
-			_, err := JoinClient.Publish(context.Background(),message)
+			// calling the publish function that takes a message and returns an empty message
+			_, err := JoinClient.Publish(context.Background(), message)
 			if err != nil {
 				log.Printf(err.Error())
-			} 
-			log.Printf("client with id: %v sent the message: %s",message.ClientId, message.Message)
+			}
+			// log.Printf("Current Lamport time: %v", message.Timestamp)
+			// log.Printf("client with id: %v sent the message: %s", message.ClientId, message.Message)
 		}
 	}()
 
-	go func(){
+	go func() {
 		wait.Wait()
 		close(done)
 	}()
 
-	//this makes sure that we can only return from the function after the goroutines are done. 
-		<-done
+	//this makes sure that we can only return from the function after the goroutines are done.
+	<-done
 }
-
 
 func connectToServer(client *proto.Client) error {
 
 	var streamError error
 
 	stream, err := JoinClient.JoinChat(context.Background(), &proto.Connect{
-		Client:   client,
+		Client: client,
 		Active: true,
 	})
 
-	if err != nil{
-		return fmt.Errorf("Connection failed: %v",err)
+	if err != nil {
+		return fmt.Errorf("Connection failed: %v", err)
 	} else {
 		//log.Printf("client with id %d joined the chat",client.Id)
 	}
 
 	wait.Add(1)
-		go func(str proto.ChittyChat_JoinChatClient){
-			defer wait.Done()
+	go func(str proto.ChittyChat_JoinChatClient) {
+		defer wait.Done()
 
-			for {
-				//call to the publishClients method Recv() which returns a chatMessage
-				//wait for us to recieve a message from the server
-				message,err := str.Recv()
+		for {
+			//call to the publishClients method Recv() which returns a chatMessage
+			//wait for us to recieve a message from the server
+			message, err := str.Recv()
 
-				//if we don't get a messsage
-				if err != nil{
-					/// i dont know
-					streamError = fmt.Errorf("error reading the message: %v", err)
-				}
-				//if no error we want to print the message to all clients: 
-				log.Printf("%v : %s", message.ClientId, message.Message)
-
+			if message.Timestamp > clientLamportClock {
+				clientLamportClock = message.Timestamp
 			}
-		}(stream) //calling the function with stream
+
+			//if we don't get a messsage
+			if err != nil {
+				/// i dont know
+				streamError = fmt.Errorf("error reading the message: %v", err)
+			}
+			//if no error we want to print the message to all clients:
+			log.Printf("%v : %s", message.ClientId, message.Message)
+
+		}
+	}(stream) //calling the function with stream
 
 	return streamError
 }
-
-
-
-
-	
