@@ -76,6 +76,10 @@ func startServer(server *Server) {
 }
 
 func (s *Server) Publish(in *proto.Connect, stream proto.ChittyChat_PublishServer) error {
+
+	in.Client.Id = int64(len(s.connection));
+	fmt.Println("giving the user the id: ", in.Client.Id)
+
 	conn := &Connection{
 		stream: stream,
 		id:    in.Client.Id,

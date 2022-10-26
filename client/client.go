@@ -41,7 +41,7 @@ func main() {
 	// Parse the flags to get the port for the client
 	flag.Parse()
 
-	name := flag.String("N", "Anon", "The name of the user")
+
 	id := int64(1)
 
 
@@ -55,10 +55,10 @@ func main() {
 
 	publishClient = proto.NewChittyChatClient(conn)
 
+	//going without name for
 	// Create a client
 	client := &proto.Client{
-		Id: id,
-		Name: *name,
+		Id: int64(id),
 	}
 
 	connectToServer(client)
@@ -109,7 +109,10 @@ func connectToServer(client *proto.Client) error {
 
 	if err != nil{
 		return fmt.Errorf("Connection failed: %v",err)
+	} else {
+		log.Printf("client with id %d joined the chat",client.Id)
 	}
+
 
 	wait.Add(1)
 		go func(str proto.ChittyChat_PublishClient){
