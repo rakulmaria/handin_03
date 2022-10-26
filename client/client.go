@@ -115,6 +115,8 @@ func connectToServer(client *proto.Client) error {
 			if message.Timestamp > clientLamportClock {
 				clientLamportClock = message.Timestamp
 			}
+			
+			clientLamportClock++
 
 			//if we don't get a messsage
 			if err != nil {
