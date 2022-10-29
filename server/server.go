@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -101,7 +102,7 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 
 	joinedMessage := &proto.ChatMessage{
 		ClientName: in.Client.Name,
-		Message:    "\n ** NEW USER JOINED \n - " + in.Client.Name + " joined the chat ", // TODO: It seems as if we can only get the "real" client name here
+		Message:    "\n ** NEW USER JOINED ** \n - " + in.Client.Name + " joined the chat ",
 		Timestamp:  serverLamportClock,
 	}
 
@@ -132,9 +133,17 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 				}
 
 				toBeSentMessage := &proto.ChatMessage{
-					ClientName: conn.name,
-					Message:    "\n ** CURRENT LAMPORT TIME: " + strconv.FormatInt(message.Timestamp, 10) + message.Message, // TODO: here the client's name is just displayed as it is his own
+					ClientName: in.ClientName,
+					Message:    "\n ** CURRENT LAMPORT TIME: " + strconv.FormatInt(message.Timestamp, 10),
 					Timestamp:  serverLamportClock,
+				}
+
+				if !strings.Contains(in.Message, "NEW USER JOINED") && !strings.Contains(in.Message, "USER LEFT THE CHAT") {
+					toBeSentMessage.Message += "\n -- " + in.ClientName + ": " + message.Message
+				} else if strings.Contains(in.Message, "USER LEFT THE CHAT") {
+					toBeSentMessage.Message += "\n" + in.ClientName + " has left the chat"
+				} else {
+					toBeSentMessage.Message += message.Message
 				}
 
 				err := conn.stream.Send(toBeSentMessage)

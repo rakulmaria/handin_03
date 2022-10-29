@@ -71,7 +71,7 @@ func main() {
 
 				LeaveMessage := &proto.ChatMessage{
 					ClientName: client.Name,
-					Message:    "client with name " + client.Name + " left the chat",
+					Message:    "** USER LEFT THE CHAT ** \n",
 					Timestamp:  clientLamportClock,
 				}
 				_, err := JoinClient.Publish(context.Background(), LeaveMessage)
@@ -144,7 +144,8 @@ func connectToServer(client *proto.Client) error {
 				streamError = fmt.Errorf("error reading the message: %v", err)
 			}
 			//if no error we want to print the message to all clients:
-			log.Printf("%v : %s", message.ClientName, message.Message)
+			//log prints the date and time as well. Do we really need that?
+			log.Printf(message.Message)
 
 		}
 	}(stream) //calling the function with stream
