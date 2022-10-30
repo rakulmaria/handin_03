@@ -51,9 +51,9 @@ func main() {
 	}
 
 	connectToServer(client)
-	//fmt.Println("printing clientname: ", client.Name)
 
 	done := make(chan int)
+
 	// Wait for the client (user) to ask for the time
 	wait.Add(1)
 	go func() {
@@ -119,7 +119,7 @@ func connectToServer(client *proto.Client) error {
 
 	if err != nil {
 		return fmt.Errorf("Connection failed: %v", err)
-	} 
+	}
 	wait.Add(1)
 	go func(str proto.ChittyChat_JoinChatClient) {
 		defer wait.Done()
