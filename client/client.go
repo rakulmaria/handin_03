@@ -40,7 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not connect to port %d", *serverPort)
 	} else {
-		log.Printf("Connected to the server at port %d\n", *serverPort)
+		//log.Printf("Connected to the server at port %d\n", *serverPort) --------Out commented to clear terminal a bit this is not logged anyway
 	}
 
 	JoinClient = proto.NewChittyChatClient(conn)
@@ -71,7 +71,7 @@ func main() {
 
 				LeaveMessage := &proto.ChatMessage{
 					ClientName: client.Name,
-					Message:    "client with name " + client.Name + " left the chat",
+					Message:    "Client " + client.Name + " left the chat",
 					Timestamp:  clientLamportClock,
 				}
 				_, err := JoinClient.Publish(context.Background(), LeaveMessage)
@@ -119,10 +119,7 @@ func connectToServer(client *proto.Client) error {
 
 	if err != nil {
 		return fmt.Errorf("Connection failed: %v", err)
-	} else {
-		//log.Printf("client with id %d joined the chat",client.Id)
-	}
-
+	} 
 	wait.Add(1)
 	go func(str proto.ChittyChat_JoinChatClient) {
 		defer wait.Done()
@@ -144,7 +141,7 @@ func connectToServer(client *proto.Client) error {
 				streamError = fmt.Errorf("error reading the message: %v", err)
 			}
 			//if no error we want to print the message to all clients:
-			log.Printf("%v : %s", message.ClientName, message.Message)
+			fmt.Printf("%v: %s ", message.ClientName, message.Message)
 
 		}
 	}(stream) //calling the function with stream

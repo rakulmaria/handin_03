@@ -6,6 +6,7 @@ import (
 	"flag"
 	"log"
 	"net"
+	"os"
 	"strconv"
 	"sync"
 
@@ -36,6 +37,16 @@ var (
 )
 
 func main() {
+
+	//setting the log file
+	f, err := os.OpenFile("golang-demo.log", os.O_RDWR | os.O_CREATE | os.O_APPEND, 0666)
+	if err != nil {
+    	log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()	
+	log.SetOutput(f)
+	
+
 	// Get the port from the command line when the server is run
 	flag.Parse()
 
@@ -72,13 +83,13 @@ func startServer(server *Server) {
 	if err != nil {
 		log.Fatalf("Could not create the server %v", err)
 	}
-	log.Printf("Started server at port: %d\n", server.port)
+	log.Printf("Started server at port: %d\n", server.port) //******************************************LOGGING Started server at...
 
 	// Register the grpc server and serve its listener
 	proto.RegisterChittyChatServer(grpcServer, server)
 	serveError := grpcServer.Serve(listener)
 	if serveError != nil {
-		log.Fatalf("Could not serve listener")
+		log.Fatalf("Could not serve listener")				 //******************************************LOGGING Could not server listener...
 	}
 }
 
@@ -101,11 +112,12 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 
 	joinedMessage := &proto.ChatMessage{
 		ClientName: in.Client.Name,
-		Message:    "\n **** NEW USER JOINED **** \n - " + in.Client.Name + " joined the chat ",
+		Message:   	in.Client.Name + " joined the chat ",
 		Timestamp:  serverLamportClock,
 	}
 
 	s.Publish(conn.stream.Context(), joinedMessage)
+	log.Printf("Participant " + in.Client.Name + " joined the Chitty-chat at lamport time " + strconv.FormatInt(joinedMessage.Timestamp, 10))  //******************************************LOGGING Participant x joined the chat at lamport time x...
 
 	//returning the error if any
 	return <-conn.error
@@ -132,8 +144,8 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 				}
 
 				toBeSentMessage := &proto.ChatMessage{
-					ClientName: conn.name,
-					Message:    "\n **** CURRENT LAMPORT TIME **** \n - " + strconv.FormatInt(message.Timestamp, 10) + message.Message,
+					ClientName: in.ClientName, //this needs to be the clientname of the sent message not each client in the range
+					Message:    message.Message + "\n **** CURRENT LAMPORT TIME **** \n - " + strconv.FormatInt(message.Timestamp, 10) + "\n",
 					Timestamp:  serverLamportClock,
 				}
 
@@ -141,13 +153,16 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 
 				//if we fail to send a message to the stream. We set the connection to not active
 				if err != nil {
-					log.Printf("Error with Stream: %v - Error: %v", conn.stream, err)
+					//log.Printf("Error with Stream: %v - Error: %v", conn.stream, err)  //******************************************LOGGING Error with stream...
+					log.Printf("participant: " + message.ClientName + "left Chitty-Chat at lamport time " + strconv.FormatInt(toBeSentMessage.Timestamp, 10)) //******************************************LOGGING Participant x left when no connection active....
 					conn.active = false
 					conn.error <- err
-				}
+				} 
 			}
 		}(in, conn)
 	}
+	log.Printf(in.ClientName + " sent message: " + in.Message + "\n at lamport time: " + strconv.FormatInt(in.Timestamp, 10))
+
 	go func() {
 		wait.Wait()
 		close(done)
@@ -161,7 +176,7 @@ func (s *Server) LeaveChat(in *proto.Connect, stream proto.ChittyChat_LeaveChatS
 	for name := range s.users {
 		if name == in.Client.Name {
 			delete(s.users, name)
-			//fmt.Println("participant with name " + name + "has left the chat")
+			log.Printf("participant " + in.Client.Name + " left the Chitty-Chat at lamport time " + strconv.FormatInt(serverLamportClock, 10)) //******************************************LOGGING Participant left through the leavechat function.....
 
 		}
 	}
