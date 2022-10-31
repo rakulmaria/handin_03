@@ -40,7 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not connect to port %d", *serverPort)
 	} else {
-		log.Printf("Connected to the server at port %d\n", *serverPort)
+		//log.Printf("Connected to the server at port %d\n", *serverPort) --------Out commented to clear terminal a bit this is not logged anyway
 	}
 
 	JoinClient = proto.NewChittyChatClient(conn)
@@ -51,9 +51,9 @@ func main() {
 	}
 
 	connectToServer(client)
-	//fmt.Println("printing clientname: ", client.Name)
 
 	done := make(chan int)
+
 	// Wait for the client (user) to ask for the time
 	wait.Add(1)
 	go func() {
@@ -119,10 +119,7 @@ func connectToServer(client *proto.Client) error {
 
 	if err != nil {
 		return fmt.Errorf("Connection failed: %v", err)
-	} else {
-		//log.Printf("client with id %d joined the chat",client.Id)
 	}
-
 	wait.Add(1)
 	go func(str proto.ChittyChat_JoinChatClient) {
 		defer wait.Done()
@@ -144,7 +141,6 @@ func connectToServer(client *proto.Client) error {
 				streamError = fmt.Errorf("error reading the message: %v", err)
 			}
 			//if no error we want to print the message to all clients:
-			//log prints the date and time as well. Do we really need that?
 			fmt.Printf(message.Message)
 
 		}
