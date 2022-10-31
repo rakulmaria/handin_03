@@ -4,11 +4,11 @@ import (
 	proto "Handin_03/grpc"
 	"context"
 	"flag"
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -100,15 +100,23 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 	s.users[in.Client.Name] = conn
 
 	//we want for every connection to broadcast a message to all saying that a person joined the chat
-	serverLamportClock++
 
 	joinedMessage := &proto.ChatMessage{
 		ClientName: in.Client.Name,
 		Message:    "\n ** NEW USER JOINED ** \n - " + in.Client.Name + " joined the chat ",
-		Timestamp:  serverLamportClock,
+		Timestamp:  in.Client.ClientClock,
 	}
 
+	if serverLamportClock < joinedMessage.Timestamp {
+		serverLamportClock = joinedMessage.Timestamp
+	}
+
+	fmt.Print("Joined message: " + strconv.FormatInt(joinedMessage.Timestamp, 10))
+
 	s.Publish(conn.stream.Context(), joinedMessage)
+
+	fmt.Printf("Serverclock: %v", serverLamportClock)
+
 	log.Printf("Participant " + in.Client.Name + " joined the Chitty-chat at lamport time " + strconv.FormatInt(joinedMessage.Timestamp, 10)) //******************************************LOGGING Participant x joined the chat at lamport time x...
 
 	//returning the error if any
@@ -122,36 +130,35 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 	//use this to know if our goroutines are finished
 	done := make(chan int)
 
+	fmt.Printf("in.Timestamp: %v", in.Timestamp)
+	if serverLamportClock < in.Timestamp {
+		serverLamportClock = in.Timestamp
+	}
+
+	serverLamportClock++
+
 	//this method should for each connection in the servers array of connections, send the message
 	for _, conn := range s.users {
 		wait.Add(1)
-
+		fmt.Printf("Serverclock in foreach: %v", serverLamportClock)
 		go func(message *proto.ChatMessage, conn *Connection) {
+			serverLamportClock++
 			//when the go routine is finished running the counter will decrement
+
 			defer wait.Done()
 
 			if conn.active {
-				if message.Timestamp > serverLamportClock {
-					serverLamportClock = message.Timestamp
-				}
-
 				toBeSentMessage := &proto.ChatMessage{
 					ClientName: in.ClientName, //this needs to be the clientname of the sent message not each client in the range
-					Message:    message.Message + "\n **** CURRENT LAMPORT TIME **** \n - " + strconv.FormatInt(message.Timestamp, 10) + "\n",
+					Message:    message.Message,
 					Timestamp:  serverLamportClock,
-				}
-
-				if !strings.Contains(in.Message, "NEW USER JOINED") && !strings.Contains(in.Message, "USER LEFT THE CHAT") {
-					toBeSentMessage.Message += "\n -- " + in.ClientName + ": " + message.Message
-				} else if strings.Contains(in.Message, "USER LEFT THE CHAT") {
-					toBeSentMessage.Message += "\n" + in.ClientName + " has left the chat"
-				} else {
-					toBeSentMessage.Message += message.Message
 				}
 
 				toBeSentMessage.Message += "\n"
 
 				err := conn.stream.Send(toBeSentMessage)
+				fmt.Printf("Serverclock: %v ", serverLamportClock)
+				fmt.Printf("ToBeSentMsg: %v ", toBeSentMessage.Timestamp)
 
 				//if we fail to send a message to the stream. We set the connection to not active
 				if err != nil {

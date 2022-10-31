@@ -12,6 +12,7 @@ message ChatMessage{
 
 message Client{
     string name = 1;
+    int64 clientClock = 2;
 }
 
 message Connect{

@@ -16,10 +16,9 @@ import (
 )
 
 var (
-	clientPort               = flag.Int("cPort", 0, "client port number")
-	serverPort               = flag.Int("sPort", 0, "server port number (should match the port used for the server)")
-	clientName               = flag.String("name", "John", "name of the client")
-	clientLamportClock int64 = 0
+	clientPort = flag.Int("cPort", 0, "client port number")
+	serverPort = flag.Int("sPort", 0, "server port number (should match the port used for the server)")
+	clientName = flag.String("name", "John", "name of the client")
 )
 
 var JoinClient proto.ChittyChatClient
@@ -47,7 +46,8 @@ func main() {
 
 	// Create a client
 	client := &proto.Client{
-		Name: *clientName,
+		Name:        *clientName,
+		ClientClock: 0,
 	}
 
 	connectToServer(client)
@@ -62,6 +62,8 @@ func main() {
 		//now we want to scan the input of the user. Meaning the messages they want to send
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
+			client.ClientClock++
+
 			input := scanner.Text()
 			if input == "exit" {
 				JoinClient.LeaveChat(context.Background(), &proto.Connect{
@@ -72,7 +74,7 @@ func main() {
 				LeaveMessage := &proto.ChatMessage{
 					ClientName: client.Name,
 					Message:    "** USER LEFT THE CHAT ** \n",
-					Timestamp:  clientLamportClock,
+					Timestamp:  client.ClientClock,
 				}
 				_, err := JoinClient.Publish(context.Background(), LeaveMessage)
 				if err != nil {
@@ -82,12 +84,11 @@ func main() {
 
 			} else {
 				//if the input was not exist we sent the message normally
-				clientLamportClock++
 
 				message := &proto.ChatMessage{
 					ClientName: client.Name,
 					Message:    input,
-					Timestamp:  clientLamportClock,
+					Timestamp:  client.ClientClock, // ændre det til client.clock
 				}
 
 				// calling the publish function that takes a message and returns an empty message
@@ -112,6 +113,8 @@ func connectToServer(client *proto.Client) error {
 
 	var streamError error
 
+	client.ClientClock++
+
 	stream, err := JoinClient.JoinChat(context.Background(), &proto.Connect{
 		Client: client,
 		Active: true,
@@ -129,11 +132,11 @@ func connectToServer(client *proto.Client) error {
 			//wait for us to recieve a message from the server
 			message, err := str.Recv()
 
-			if message.Timestamp > clientLamportClock {
-				clientLamportClock = message.Timestamp
+			if message.Timestamp > client.ClientClock {
+				client.ClientClock = message.Timestamp
 			}
 
-			clientLamportClock++
+			client.ClientClock++
 
 			//if we don't get a messsage
 			if err != nil {
@@ -141,7 +144,7 @@ func connectToServer(client *proto.Client) error {
 				streamError = fmt.Errorf("error reading the message: %v", err)
 			}
 			//if no error we want to print the message to all clients:
-			fmt.Printf(message.Message)
+			fmt.Printf("NAME: " + client.Name + " LAMPORT TIME: " + strconv.FormatInt(client.ClientClock, 10) + "\n MESSAGE: " + message.Message)
 
 		}
 	}(stream) //calling the function with stream
