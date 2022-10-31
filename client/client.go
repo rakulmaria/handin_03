@@ -73,7 +73,7 @@ func main() {
 
 				LeaveMessage := &proto.ChatMessage{
 					ClientName: client.Name,
-					Message:    "** USER LEFT THE CHAT ** \n",
+					Message:    *clientName + "** USER LEFT THE CHAT ** ",
 					Timestamp:  client.ClientClock,
 				}
 				_, err := JoinClient.Publish(context.Background(), LeaveMessage)
@@ -144,7 +144,7 @@ func connectToServer(client *proto.Client) error {
 				streamError = fmt.Errorf("error reading the message: %v", err)
 			}
 			//if no error we want to print the message to all clients:
-			fmt.Printf("NAME: " + client.Name + " LAMPORT TIME: " + strconv.FormatInt(client.ClientClock, 10) + "\n MESSAGE: " + message.Message)
+			fmt.Printf("LAMPORT TIME: " + strconv.FormatInt(client.ClientClock, 10) + "\n" +  message.Message)
 
 		}
 	}(stream) //calling the function with stream

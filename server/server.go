@@ -111,13 +111,10 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 		serverLamportClock = joinedMessage.Timestamp
 	}
 
-	fmt.Print("Joined message: " + strconv.FormatInt(joinedMessage.Timestamp, 10))
-
 	s.Publish(conn.stream.Context(), joinedMessage)
 
-	fmt.Printf("Serverclock: %v", serverLamportClock)
-
-	log.Printf("Participant " + in.Client.Name + " joined the Chitty-chat at lamport time " + strconv.FormatInt(joinedMessage.Timestamp, 10)) //******************************************LOGGING Participant x joined the chat at lamport time x...
+	log.Printf("Participant " + in.Client.Name + " joined the Chitty-chat at lamport time " + "%v",serverLamportClock);
+	 //******************************************LOGGING Participant x joined the chat at lamport time x...
 
 	//returning the error if any
 	return <-conn.error
@@ -129,8 +126,6 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 
 	//use this to know if our goroutines are finished
 	done := make(chan int)
-
-	fmt.Printf("in.Timestamp: %v", in.Timestamp)
 	if serverLamportClock < in.Timestamp {
 		serverLamportClock = in.Timestamp
 	}
@@ -150,26 +145,25 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 			if conn.active {
 				toBeSentMessage := &proto.ChatMessage{
 					ClientName: in.ClientName, //this needs to be the clientname of the sent message not each client in the range
-					Message:    message.Message,
+					Message:    in.ClientName + ": " + message.Message,
 					Timestamp:  serverLamportClock,
 				}
 
 				toBeSentMessage.Message += "\n"
 
 				err := conn.stream.Send(toBeSentMessage)
-				fmt.Printf("Serverclock: %v ", serverLamportClock)
-				fmt.Printf("ToBeSentMsg: %v ", toBeSentMessage.Timestamp)
+				
 
 				//if we fail to send a message to the stream. We set the connection to not active
 				if err != nil {
-					log.Printf("participant: " + message.ClientName + "left Chitty-Chat at lamport time " + strconv.FormatInt(toBeSentMessage.Timestamp, 10)) //******************************************LOGGING Participant x left when no connection active....
+					log.Printf("participant: " + message.ClientName + "left Chitty-Chat at lamport time " + "%v",serverLamportClock) //******************************************LOGGING Participant x left when no connection active....
 					conn.active = false
 					conn.error <- err
 				}
 			}
 		}(in, conn)
 	}
-	log.Printf(in.ClientName + " sent message: " + in.Message + "\n at lamport time: " + strconv.FormatInt(in.Timestamp, 10))
+	log.Printf(in.ClientName + " sent message: " + in.Message + " at lamport time: " + "%v",serverLamportClock)
 
 	go func() {
 		wait.Wait()
@@ -184,7 +178,7 @@ func (s *Server) LeaveChat(in *proto.Connect, stream proto.ChittyChat_LeaveChatS
 	for name := range s.users {
 		if name == in.Client.Name {
 			delete(s.users, name)
-			log.Printf("participant " + in.Client.Name + " left the Chitty-Chat at lamport time " + strconv.FormatInt(serverLamportClock, 10)) //******************************************LOGGING Participant left through the leavechat function.....
+			log.Printf("participant " + in.Client.Name + " left the Chitty-Chat at lamport time " + "%v",serverLamportClock) //******************************************LOGGING Participant left through the leavechat function.....
 
 		}
 	}
