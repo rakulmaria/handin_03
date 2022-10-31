@@ -145,7 +145,7 @@ func connectToServer(client *proto.Client) error {
 			}
 			//if no error we want to print the message to all clients:
 			//log prints the date and time as well. Do we really need that?
-			log.Printf(message.Message)
+			fmt.Printf(message.Message)
 
 		}
 	}(stream) //calling the function with stream

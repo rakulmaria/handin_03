@@ -134,7 +134,7 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 
 				toBeSentMessage := &proto.ChatMessage{
 					ClientName: in.ClientName,
-					Message:    "\n ** CURRENT LAMPORT TIME: " + strconv.FormatInt(message.Timestamp, 10),
+					Message:    "\n + ** CURRENT LAMPORT TIME: " + strconv.FormatInt(message.Timestamp, 10),
 					Timestamp:  serverLamportClock,
 				}
 
@@ -145,6 +145,8 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 				} else {
 					toBeSentMessage.Message += message.Message
 				}
+
+				toBeSentMessage.Message += "\n"
 
 				err := conn.stream.Send(toBeSentMessage)
 
