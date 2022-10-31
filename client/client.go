@@ -64,6 +64,7 @@ func main() {
 		for scanner.Scan() {
 			input := scanner.Text()
 			if input == "exit" {
+				clientLamportClock++
 				JoinClient.LeaveChat(context.Background(), &proto.Connect{
 					Client: client,
 					Active: false,

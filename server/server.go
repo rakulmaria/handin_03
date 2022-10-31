@@ -100,7 +100,7 @@ func (s *Server) JoinChat(in *proto.Connect, stream proto.ChittyChat_JoinChatSer
 	s.users[in.Client.Name] = conn
 
 	//we want for every connection to broadcast a message to all saying that a person joined the chat
-	serverLamportClock++
+	serverLamportClock += 2
 
 	joinedMessage := &proto.ChatMessage{
 		ClientName: in.Client.Name,
@@ -137,7 +137,7 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 
 				toBeSentMessage := &proto.ChatMessage{
 					ClientName: in.ClientName, //this needs to be the clientname of the sent message not each client in the range
-					Message:    message.Message + "\n **** CURRENT LAMPORT TIME **** \n - " + strconv.FormatInt(message.Timestamp, 10) + "\n",
+					Message:    "\n ** CURRENT LAMPORT TIME ** \n - " + strconv.FormatInt(message.Timestamp, 10) + "\n",
 					Timestamp:  serverLamportClock,
 				}
 
@@ -162,7 +162,7 @@ func (s *Server) Publish(ctx context.Context, in *proto.ChatMessage) (*proto.Emp
 			}
 		}(in, conn)
 	}
-	log.Printf(in.ClientName + " sent message: " + in.Message + "\n at lamport time: " + strconv.FormatInt(in.Timestamp, 10))
+	log.Printf(in.ClientName + " sent message: " + in.Message + " at lamport time: " + strconv.FormatInt(in.Timestamp, 10))
 
 	go func() {
 		wait.Wait()
@@ -177,7 +177,7 @@ func (s *Server) LeaveChat(in *proto.Connect, stream proto.ChittyChat_LeaveChatS
 	for name := range s.users {
 		if name == in.Client.Name {
 			delete(s.users, name)
-			log.Printf("participant " + in.Client.Name + " left the Chitty-Chat at lamport time " + strconv.FormatInt(serverLamportClock, 10)) //******************************************LOGGING Participant left through the leavechat function.....
+			//log.Printf("participant " + in.Client.Name + " left the Chitty-Chat at lamport time " + strconv.FormatInt(serverLamportClock, 10)) //******************************************LOGGING Participant left through the leavechat function.....
 
 		}
 	}
